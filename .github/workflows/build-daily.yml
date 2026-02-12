@@ -1,49 +1,30 @@
-name: Build Daily Book
+name: Clipping Legislativo GSGA
+
 on:
-  workflow_dispatch:
-  # schedule:
-  #   - cron: "3 16 * * *"
+  schedule:
+    # Executa às 11:00 UTC (08:00 Horário de Brasília)
+    # 2 = Terça-feira, 5 = Sexta-feira
+    - cron: '0 11 * * 2,5'
+  workflow_dispatch: # Permite que execute o script manualmente para testar
+
 jobs:
-  build-deploy:
-    concurrency: build-daily-book
+  enviar_clipping:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: denoland/setup-deno@v1
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
         with:
-          deno-version: v1.x
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.deno
-            ~/.cache/deno
-          key: ${{ runner.os }}-deno-${{ hashFiles('cli.ts') }}
-      - name: Get Yestoday Beijin Day
-        id: date
-        run: |
-          echo "::set-output name=yesterday::$(deno run cli.ts --yesterday --key)"
-      - run: make install
-      - name: Build yesterday book
-        id: build
-        run: make yesterdaymail
-        continue-on-error: true
+          python-version: '3.10'
+
+      - name: Instalar dependências
+        run: pip install anthropic
+
+      - name: Executar Script
         env:
-          MJ_APIKEY_PUBLIC: ${{ secrets.MJ_APIKEY_PUBLIC }}
-          MJ_APIKEY_PRIVATE: ${{ secrets.MJ_APIKEY_PRIVATE }}
-          JOURNAL_PATH: ./blog
-          JOURNAL_URL: https://www.owenyoung.com/blog/journals/
-      - name: make release if build success
-        if: steps.build.outcome == 'success'
-        uses: "softprops/action-gh-release@v1"
-        env:
-          YESTERDAY: 
-        with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
-          tag_name: "daily-${{ steps.date.outputs.yesterday }}"
-          generate_release_notes: false
-          body: |
-            Visit [Online](https://clip-template.vercel.app/).
-          files: |
-            ./dist/*/*.epub
-            ./dist/*/*.zip
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+          EMAIL_SENHA: ${{ secrets.EMAIL_SENHA }}
+        run: python nome_do_seu_script.py
